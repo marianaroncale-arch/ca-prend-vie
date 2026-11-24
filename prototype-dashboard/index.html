@@ -8,10 +8,17 @@
   <script src="script.js" defer></script>
 </head>
 <body>
-  <header class="topbar"><span>ÇA PREND VIE <span class="divider">/</span> DOSSIER AURORA</span><button id="restart" class="quiet">Recommencer</button></header>
+  <header class="topbar"><span>ÇA PREND VIE <span class="divider">/</span> DOSSIER AURORA</span><button id="restart" class="quiet">Recommencer l’activité</button></header>
   <main>
     <div class="document-bar" aria-hidden="true"><span class="file-mark">▤</span> Dossier_Aurora_Enquête <span class="document-meta">ACTE I / DOSSIER DE TRAVAIL</span></div>
     <div class="botanical" aria-hidden="true"><svg viewBox="0 0 220 240" fill="none"><path d="M205 0C175 65 138 136 35 226M150 111L185 126M121 146L85 114M172 65L138 43" stroke="#7a7955" stroke-width="3"/><g fill="#52684c" stroke="#304c3c" stroke-width="1.5"><path d="M178 57Q210 45 211 20Q178 21 178 57Z"/><path d="M168 78Q124 75 126 40Q159 44 168 78Z"/><path d="M151 106Q199 110 202 79Q163 73 151 106Z"/><path d="M135 131Q95 111 105 83Q138 94 135 131Z"/><path d="M109 159Q151 176 176 143Q136 128 109 159Z"/><path d="M85 181Q48 148 63 126Q96 143 85 181Z"/><path d="M62 204Q105 219 128 185Q90 175 62 204Z"/></g></svg></div>
+    <aside class="memory-panel" aria-label="Mémoire du prototype">
+      <label for="test-player">Profil de test local</label>
+      <select id="test-player"><option value="a">Joueur test A</option><option value="b">Joueur test B</option></select>
+      <button id="open-kit" class="quiet">Mon kit · 0/10</button>
+      <p id="save-status" role="status"></p>
+      <small>Test sur cet appareil. Ces profils ne sont pas vos comptes Wix.</small>
+    </aside>
     <section id="dashboard" aria-labelledby="dashboard-title">
       <p class="eyebrow">ACTE I · OBSERVER · 07–08</p>
       <h1 id="dashboard-title">DASHBOARD <span class="title-accent">#AURORA</span></h1>
@@ -27,11 +34,26 @@
       <h1 id="hypothesis-title" tabindex="-1">PREMIÈRE HYPOTHÈSE</h1>
       <p class="intro">À partir de ces données, quelle est votre première hypothèse ?</p>
       <fieldset><legend>Choisissez une hypothèse pour consulter son retour.</legend><div id="choices" class="choices"></div></fieldset>
-      <section id="feedback" class="feedback" aria-labelledby="feedback-title" hidden aria-live="polite"><h2 id="feedback-title">Votre hypothèse à l’épreuve des données</h2><p id="specific-feedback"></p><p>Le bon réflexe de gestion n’est pas de deviner la réponse attendue : observer ce qui se passe, regarder au-delà de la plateforme et chercher des preuves. Vos hypothèses n’ont pas toutes le même niveau d’appui. L’enquête va vous aider à les départager.</p><p class="closing">Vous avez transformé une impression en hypothèse à vérifier.</p><p class="prototype-note">Fin de ce prototype. La suite sera « Découvrir mon repère » dans le parcours Genially (écran 10).</p></section>
+      <section id="feedback" class="feedback" aria-labelledby="feedback-title" hidden aria-live="polite"><h2 id="feedback-title">Votre hypothèse à l’épreuve des données</h2><p id="specific-feedback"></p><p>Le bon réflexe de gestion n’est pas de deviner la réponse attendue : observer ce qui se passe, regarder au-delà de la plateforme et chercher des preuves. Vos hypothèses n’ont pas toutes le même niveau d’appui. L’enquête va vous aider à les départager.</p><p class="closing">Vous avez transformé une impression en hypothèse à vérifier.</p><button id="discover-card">Découvrir mon repère</button></section>
       <button id="back" class="quiet">Retour au dashboard</button>
     </section>
   </main>
-  <footer>Vos notes et votre choix restent disponibles pendant cette session. Recharger la page ou recommencer efface votre exploration.</footer>
+  <footer>Progression locale de test · aucune synchronisation avec Wix. Recommencer l’activité conserve vos cartes et votre historique.</footer>
+  <dialog id="kit-dialog" aria-labelledby="kit-title">
+    <div class="dialog-header"><p class="eyebrow">MON KIT DE TRANSFORMATION</p><button id="close-kit" class="quiet">Fermer</button></div>
+    <h2 id="kit-title">Vos repères de terrain</h2>
+    <article class="collectible">
+      <p class="eyebrow">REPÈRE DE TERRAIN 01</p><h3>COMPLÉTION ≠ IMPACT</h3>
+      <p><strong>Marie :</strong> « Tu viens de distinguer deux choses que notre reporting mélange facilement : terminer et transformer. Garde cette découverte pour la suite. »</p>
+      <p><strong>L’apprentissage du jour :</strong> terminer un parcours indique qu’il a été parcouru ; cela ne démontre pas qu’une pratique a changé.</p>
+      <p><strong>Ce que vous venez de faire :</strong> distinguer parcours terminé et pratique transformée pour construire un repère réutilisable.</p>
+      <p><strong>À tester demain :</strong> pour chaque KPI, ajoutez la question « Et après ? »</p>
+      <p id="card-state"></p><button id="collect-card">Ajouter à mon kit de transformation</button>
+    </article>
+    <h3>Historique de ce profil</h3><ul id="card-history"></ul>
+    <p class="hint">La collecte ci-dessus teste l’enregistrement de la carte de l’écran 10. Elle ne change pas de page dans Genially.</p>
+    <button id="erase-profile" class="quiet">Effacer la progression de ce profil</button>
+  </dialog>
   <dialog id="detail-dialog" aria-labelledby="detail-title">
     <div class="dialog-header"><p class="eyebrow">CE QUE CACHENT LES CHIFFRES</p><button id="close-detail" class="quiet">Fermer le détail</button></div>
     <h2 id="detail-title"></h2><p id="detail-question" class="intro"></p>
@@ -39,7 +61,7 @@
     <div id="detail-content" hidden><h3>Les éléments du dossier</h3><p id="detail-copy"></p><p id="detail-followup"></p></div>
     <label for="question-note">Noter une question <span class="optional">(facultatif)</span></label>
     <textarea id="question-note" rows="3" maxlength="2000" placeholder="Quelle question souhaitez-vous vérifier ?"></textarea>
-    <p class="hint">Votre note est conservée automatiquement pendant cette session.</p>
+    <p class="hint">Votre note suit le mode de sauvegarde indiqué en haut de l’activité.</p>
     <button id="return-dashboard" class="quiet">Retour au dashboard</button>
   </dialog>
 </body>

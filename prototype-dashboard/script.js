@@ -11,7 +11,7 @@ const hypotheses = [
   {text:'Les indicateurs ne racontent qu’une partie de l’histoire.', feedback:'C’est l’hypothèse la mieux étayée à ce stade. Les données de parcours et le signal J+30 posent des questions différentes.'},
   {text:'Les participants n’ont probablement pas retenu le contenu.', feedback:'C’est une hypothèse possible, mais aucune donnée présentée ne démontre un défaut de mémorisation.'}
 ];
-// Mémoire temporaire : aucun stockage local ni envoi de données.
+// Progression en mémoire et sauvegarde locale de test ; aucune donnée envoyée à Wix.
 const state = {visited:new Set(), notes:{}, hypothesis:null, active:null};
 const $ = id => document.getElementById(id);
 const dialog = $('detail-dialog');
@@ -61,8 +61,9 @@ $('show-detail').addEventListener('click', () => {
   $('detail-content').focus();
   $('show-detail').hidden = true;
   updateProgress();
+  saveProgress();
 });
-$('question-note').addEventListener('input', event => {state.notes[state.active] = event.target.value;});
+$('question-note').addEventListener('input', event => {state.notes[state.active] = event.target.value; saveProgress();});
 $('close-detail').addEventListener('click', () => dialog.close());
 $('return-dashboard').addEventListener('click', () => dialog.close());
 
@@ -77,6 +78,7 @@ hypotheses.forEach((item,index) => {
     state.hypothesis = index;
     $('specific-feedback').textContent = item.feedback;
     $('feedback').hidden = false;
+    saveProgress();
   });
   $('choices').append(label);
 });
@@ -103,5 +105,79 @@ $('restart').addEventListener('click', () => {
   updateProgress();
   $('dashboard-title').tabIndex = -1;
   $('dashboard-title').focus();
+  saveProgress();
+  renderKit();
 });
 updateProgress();
+
+
+// Deux profils fictifs pour vérifier la séparation des collections avant le raccord Wix.
+const STORAGE_PREFIX = 'ca-prend-vie:aurora:v1:';
+let profile = 'a';
+let cards = [];
+let history = [];
+const memoryFallback = {};
+function snapshot(){
+  return {version:1,visited:[...state.visited],notes:state.notes,hypothesis:state.hypothesis,cards,history};
+}
+function saveProgress(){
+  const data = snapshot();
+  memoryFallback[profile] = JSON.stringify(data);
+  try {
+    localStorage.setItem(STORAGE_PREFIX + profile, JSON.stringify(data));
+    $('save-status').textContent = 'Enregistré dans ce navigateur · ' + new Date().toLocaleTimeString('fr-FR');
+  } catch {
+    $('save-status').textContent = 'Sauvegarde persistante indisponible : vos données restent seulement dans cette page. Ne la fermez pas.';
+  }
+}
+function loadProgress(){
+  let raw;
+  try { raw = localStorage.getItem(STORAGE_PREFIX + profile) || memoryFallback[profile]; }
+  catch { raw = memoryFallback[profile]; }
+  let data = {};
+  try { const parsed = JSON.parse(raw || '{}'); if(parsed && parsed.version === 1) data = parsed; }
+  catch { $('save-status').textContent = 'Sauvegarde illisible. Ce profil repart sans progression.'; }
+  state.visited = new Set(Array.isArray(data.visited) ? data.visited.filter(id=>indicators.some(item=>item.id===id)) : []);
+  state.notes = {};
+  indicators.forEach(item=>{if(typeof data.notes?.[item.id] === 'string') state.notes[item.id]=data.notes[item.id].slice(0,2000);});
+  state.hypothesis = state.visited.size===5 && Number.isInteger(data.hypothesis) && data.hypothesis>=0 && data.hypothesis<hypotheses.length ? data.hypothesis : null;
+  cards = Array.isArray(data.cards) && data.cards.includes('repere-01') ? ['repere-01'] : [];
+  history = Array.isArray(data.history) ? data.history.filter(event=>event?.card==='repere-01' && typeof event.at==='string' && Number.isFinite(Date.parse(event.at))).slice(0,1) : [];
+  state.active = null;
+  if(dialog.open) dialog.close();
+  if($('kit-dialog').open) $('kit-dialog').close();
+  $('hypothesis').hidden=true; $('dashboard').hidden=false;
+  $('question-note').value='';
+  document.querySelectorAll('input[name=hypothesis]').forEach(input=>{input.checked=Number(input.value)===state.hypothesis && state.hypothesis!==null;});
+  $('feedback').hidden=state.hypothesis===null;
+  $('specific-feedback').textContent=state.hypothesis===null ? '' : hypotheses[state.hypothesis].feedback;
+  updateProgress(); renderKit(); saveProgress();
+}
+function renderKit(){
+  const owned=cards.includes('repere-01');
+  $('open-kit').textContent=`Mon kit · ${cards.length}/10`;
+  $('collect-card').disabled=owned || state.hypothesis===null || state.visited.size!==5;
+  $('collect-card').textContent=owned ? 'Déjà dans mon kit · 1/10' : 'Ajouter à mon kit de transformation';
+  $('card-state').textContent=owned ? 'Carte acquise. Elle reste dans votre kit lorsque vous recommencez l’activité.' : state.hypothesis===null ? 'Carte verrouillée. Consultez les cinq détails et choisissez une hypothèse pour la découvrir.' : 'Vous avez formulé une hypothèse : votre premier repère est disponible.';
+  document.querySelector('#kit-dialog .collectible').hidden=!owned && state.hypothesis===null;
+  $('card-history').replaceChildren();
+  if(!history.length){const li=document.createElement('li');li.textContent='Aucune carte collectée pour ce profil.';$('card-history').append(li);}
+  history.forEach(event=>{const li=document.createElement('li');li.textContent='Repère 01 — Complétion ≠ Impact · collecté le '+new Date(event.at).toLocaleString('fr-FR');$('card-history').append(li);});
+}
+function openKit(){renderKit();$('kit-dialog').showModal();}
+$('open-kit').addEventListener('click',openKit);
+$('discover-card').addEventListener('click',openKit);
+$('close-kit').addEventListener('click',()=>$('kit-dialog').close());
+$('collect-card').addEventListener('click',()=>{
+  if(state.hypothesis===null || state.visited.size!==5 || cards.includes('repere-01')) return;
+  cards.push('repere-01');
+  history.push({card:'repere-01',at:new Date().toISOString(),hypothesis:state.hypothesis});
+  saveProgress(); renderKit();
+});
+$('test-player').addEventListener('change',event=>{saveProgress();profile=event.target.value==='b'?'b':'a';loadProgress();});
+$('erase-profile').addEventListener('click',()=>{
+  if(!window.confirm('Effacer les notes, les cartes et l’historique de ce profil de test uniquement ?')) return;
+  cards=[];history=[];state.visited.clear();state.notes={};state.hypothesis=null;
+  saveProgress();loadProgress();$('open-kit').focus();
+});
+loadProgress();
